@@ -43,7 +43,6 @@ describe OmniAuth::Strategies::Apple do
         'aud' => 'appid',
         'exp' => Time.now.to_i + 3600,
         'iat' => Time.now.to_i,
-        'nonce_supported' => true,
         'email' => 'something@privatrerelay.appleid.com',
         'email_verified' => true,
     }
@@ -211,8 +210,7 @@ describe OmniAuth::Strategies::Apple do
       }
     end
     before(:each) do
-      subject.authorize_params # initializes session / populates 'nonce', 'state', etc
-      id_token_payload['nonce'] = subject.session['omniauth.nonce']
+      subject.authorize_params # initializes session / populates 'state', etc
       request.params.merge!('id_token' => id_token, 'user' => user_info_payload.to_json)
     end
 
@@ -238,20 +236,6 @@ describe OmniAuth::Strategies::Apple do
       expect(subject.info[:name]).to eq 'first last'
     end
 
-    context 'fails nonce' do
-      before(:each) do
-        expect(subject).to receive(:fail!).with(:nonce_mismatch, instance_of(OmniAuth::Strategies::OAuth2::CallbackError))
-      end
-      it 'when differs from session' do
-        subject.session['omniauth.nonce'] = 'abc'
-        subject.info
-      end
-      it 'when missing from session' do
-        subject.session.delete('omniauth.nonce')
-        subject.info
-      end
-    end
-
     context 'with a spoofed email in the user payload' do
       before do
         request.params['user'] = {
@@ -271,8 +255,7 @@ describe OmniAuth::Strategies::Apple do
 
   describe '#extra' do
     before(:each) do
-      subject.authorize_params # initializes session / populates 'nonce', 'state', etc
-      id_token_payload['nonce'] = subject.session['omniauth.nonce']
+      subject.authorize_params # initializes session / populates 'state', etc
     end
 
     describe 'id_token' do

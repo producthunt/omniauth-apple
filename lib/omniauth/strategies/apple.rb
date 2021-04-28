@@ -38,23 +38,11 @@ module OmniAuth
         ::OAuth2::Client.new(client_id, client_secret, deep_symbolize(options.client_options))
       end
 
-      def authorize_params
-        super.merge(nonce: new_nonce)
-      end
-
       def callback_url
         options[:redirect_uri] || (full_host + script_name + callback_path)
       end
 
       private
-
-      def new_nonce
-        session['omniauth.nonce'] = SecureRandom.urlsafe_base64(16)
-      end
-
-      def stored_nonce
-        session.delete('omniauth.nonce')
-      end
 
       def id_info
         @id_info ||= if request.params&.key?('id_token') || access_token&.params&.key?('id_token')
@@ -69,7 +57,6 @@ module OmniAuth
                          jwks: fetch_jwks
                        }
                        payload, _header = ::JWT.decode(id_token, nil, true, jwt_options)
-                       verify_nonce!(payload)
                        payload
                      end
       end
@@ -78,14 +65,6 @@ module OmniAuth
         uri = URI.parse('https://appleid.apple.com/auth/keys')
         response = Net::HTTP.get_response(uri)
         JSON.parse(response.body, symbolize_names: true)
-      end
-
-      def verify_nonce!(payload)
-        return unless payload['nonce_supported']
-
-        return if payload['nonce'] && payload['nonce'] == stored_nonce
-
-        fail!(:nonce_mismatch, CallbackError.new(:nonce_mismatch, 'nonce mismatch'))
       end
 
       def client_id
